@@ -2,6 +2,7 @@ package main;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,33 +13,52 @@ public class Main {
 
 	public static void main(String[] args) {
 		
-		ArrayList<ArrayList<ArrayList<Character>>> input = getInput("src/resources/in.txt");
-		long start = (long)System.currentTimeMillis();
+		long in = System.currentTimeMillis();
+		ArrayList<Floor> input = getInput("src/resources/in.txt");
+		long inE = System.currentTimeMillis()-in;
+		long pather = System.currentTimeMillis();
+		ArrayList<Coordinate> path = pathFind(input);
+		long patherE = System.currentTimeMillis()-pather;
+		long out = System.currentTimeMillis();
+		output("src/resources/out.txt", maze, path);
+		long outE = System.currentTimeMillis()-out;
 		
-		pathFind(input);
-		long elapsed =(long)System.currentTimeMillis()-(long)start;
-		System.out.println(elapsed);
-		
-		
+		System.out.println("Read Time: " + inE + "ms");
+		System.out.println("Pathfind Time: " + patherE + "ms");
+		System.out.println("Output: " + outE + "ms");
+		System.out.println("   Replace Time: " + oSplit1 + "ms");
+		System.out.println("   Write Time: " + oSplit2 + "ms");
+		System.out.println("Total Time: " + (inE + patherE + outE) + "ms");
 	}
 
-	public static ArrayList<ArrayList<ArrayList<Character>>> getInput(String fileName) {
+	public static ArrayList<Floor> getInput(String fileName) {
 		try {
 			
 			BufferedReader input = new BufferedReader(new FileReader(new File(fileName)));
-			ArrayList<ArrayList<ArrayList<Character>>> layers = new ArrayList<ArrayList<ArrayList<Character>>>();
-			ArrayList<ArrayList<Character>> level = new ArrayList<ArrayList<Character>>();
+			ArrayList<Floor> layers = new ArrayList<Floor>();
+			Floor level = new Floor();
+			int yLevel = 0;
 			String inputLine;
 			while ((inputLine = input.readLine()) != null) {
+				
 				if (inputLine.length() != 0) {
 					ArrayList<Character> charList = new ArrayList<Character>();
 					for (int i = 0; i < inputLine.length(); i++) {
+						Character c = inputLine.charAt(i);
+						if (c == 'S' || c == 'z') {
+							level.startPos = new Coordinate(i, yLevel);
+						}
+						if (c == 'X' || c == 'Z') {
+							level.endPos = new Coordinate(i, yLevel);
+						}
 						charList.add(inputLine.charAt(i));
 					}
+					yLevel++;
 					level.add(charList);
 				} else {
+					yLevel = 0;
 					layers.add(level);
-					level = new ArrayList<ArrayList<Character>>();
+					level = new Floor();
 				}
 			}
 			layers.add(level);
@@ -58,30 +78,17 @@ public class Main {
 	static ArrayList<Point> openList;
 	static ArrayList<Point> closedList;
 
-	static ArrayList<ArrayList<ArrayList<Character>>> maze;
+	static ArrayList<Floor> maze;
 
-	public static String pathFind(ArrayList<ArrayList<ArrayList<Character>>> mazer) {
+	public static ArrayList<Coordinate> pathFind(ArrayList<Floor> mazer) {
 		maze = mazer;
+		ArrayList<Coordinate> finalPath = new ArrayList<Coordinate>();
 		for (int z = 0; z < maze.size(); z++) {
-			System.out.println("Layer " + z);
-			Coordinate startPos = null;
-			Coordinate endPos = null;
-			for (int y = 0; y < maze.get(z).size(); y++) {
-				for (int x = 0; x < maze.get(z).get(y).size(); x++) {
-					if (maze.get(z).get(y).get(x) == 'S' || maze.get(z).get(y).get(x) == 'z') {
-						startPos = new Coordinate(x, y);
-					}
-					if (maze.get(z).get(y).get(x) == 'X' || maze.get(z).get(y).get(x) == 'Z') {
-						endPos = new Coordinate(x, y);
-					}
-				}
-			}
-			System.out.println("Start: " + startPos.x + "," + startPos.y);
 			openList = new ArrayList<Point>();
 			closedList = new ArrayList<Point>();
-			Point startPoint = new Point(null, startPos, 0);
+			Point startPoint = new Point(null, maze.get(z).startPos, 0);
 			closedList.add(startPoint);
-			TryAddOpens(startPoint, endPos, z);
+			TryAddOpens(startPoint, maze.get(z).endPos, z);
 
 			boolean done = false;
 			Point finalsq = null;
@@ -91,7 +98,7 @@ public class Main {
 					if (least == null || p.cost < least.cost) {
 						least = p;
 					}
-					if (p.coords.x == endPos.x && p.coords.y == endPos.y) {
+					if (p.coords.x == maze.get(z).endPos.x && p.coords.y == maze.get(z).endPos.y) {
 						done = true;
 						finalsq = p;
 						break;
@@ -99,11 +106,11 @@ public class Main {
 				}
 				openList.remove(least);
 				closedList.add(least);
-				TryAddOpens(least, endPos, z);
-				if ((least.coords.x == endPos.x && least.coords.y == endPos.y) || openList.size() == 0) {
+				TryAddOpens(least, maze.get(z).endPos, z);
+				if ((least.coords.x == maze.get(z).endPos.x && least.coords.y == maze.get(z).endPos.y) || openList.size() == 0) {
 					done = true;
 					finalsq = least;
-					if((least.coords.x != endPos.x || least.coords.y != endPos.y)) {
+					if((least.coords.x != maze.get(z).endPos.x || least.coords.y != maze.get(z).endPos.y)) {
 						System.out.println("No Path!");
 						return null;
 					}
@@ -120,35 +127,32 @@ public class Main {
 					donePath = true;
 				}
 			}
-			ArrayList<Coordinate> finalPath = new ArrayList<Coordinate>();
+			
 			for (int i = finalPathBackwards.size() - 1; i >= 0; i--) {
 				finalPath.add(finalPathBackwards.get(i));
 			}
-
-			for (Coordinate c : finalPath) {
-				System.out.println(c.x + "," + c.y);
-			}
+			
 
 		}
-		return null;
+		return finalPath;
 	}
 
 	private static void TryAddOpens(Point p, Coordinate finish, int z) {
 		if (maze.get(z).get(p.coords.y).get(p.coords.x + 1) != '#') {
 			int cost = Math.abs(((p.coords.x + 1) - finish.x)) + Math.abs(((p.coords.y) - finish.y));
-			TryAddOpen(new Point(p, new Coordinate(p.coords.x + 1, p.coords.y), cost));
+			TryAddOpen(new Point(p, new Coordinate(p.coords.x + 1, p.coords.y, z), cost));
 		}
 		if (maze.get(z).get(p.coords.y).get(p.coords.x - 1) != '#') {
 			int cost = Math.abs(((p.coords.x - 1) - finish.x)) + Math.abs(((p.coords.y) - finish.y));
-			TryAddOpen(new Point(p, new Coordinate(p.coords.x - 1, p.coords.y), cost));
+			TryAddOpen(new Point(p, new Coordinate(p.coords.x - 1, p.coords.y, z), cost));
 		}
 		if (maze.get(z).get(p.coords.y + 1).get(p.coords.x) != '#') {
 			int cost = Math.abs(((p.coords.x) - finish.x)) + Math.abs(((p.coords.y + 1) - finish.y));
-			TryAddOpen(new Point(p, new Coordinate(p.coords.x, p.coords.y + 1), cost));
+			TryAddOpen(new Point(p, new Coordinate(p.coords.x, p.coords.y + 1, z), cost));
 		}
 		if (maze.get(z).get(p.coords.y - 1).get(p.coords.x) != '#') {
 			int cost = Math.abs(((p.coords.x) - finish.x)) + Math.abs(((p.coords.y - 1) - finish.y));
-			TryAddOpen(new Point(p, new Coordinate(p.coords.x, p.coords.y - 1), cost));
+			TryAddOpen(new Point(p, new Coordinate(p.coords.x, p.coords.y - 1, z), cost));
 		}
 	}
 
@@ -172,6 +176,36 @@ public class Main {
 		}
 		if (!onOpenList) {
 			openList.add(p);
+		}
+	}
+	static long oSplit1;
+	static long oSplit2;
+	public static void output(String file, ArrayList<Floor> map, ArrayList<Coordinate> path) {
+		oSplit1 = System.currentTimeMillis();
+		for(int i = 0; i < path.size(); i++) {
+			if(map.get(path.get(i).z).get(path.get(i).y).get(path.get(i).x) == ' ') {
+				map.get(path.get(i).z).get(path.get(i).y).set(path.get(i).x, 'P');
+			}
+		}
+		oSplit1 = System.currentTimeMillis() - oSplit1;
+
+		try {
+		oSplit2 = System.currentTimeMillis();
+		FileOutputStream out = new FileOutputStream(file);
+		for(int z = 0; z < map.size(); z++) {
+			for(int y = 0; y < map.get(z).size(); y++) {
+				for(int x = 0; x < map.get(z).get(y).size(); x++) {
+					out.write(map.get(z).get(y).get(x));
+				}
+				out.write("\n".getBytes());
+			}
+			out.write("\n".getBytes());
+		}
+		
+		out.close();
+		oSplit2 = System.currentTimeMillis() - oSplit2;
+		} catch(Exception e) {
+			e.printStackTrace();
 		}
 	}
 }
