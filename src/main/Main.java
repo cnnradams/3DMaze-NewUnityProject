@@ -1,11 +1,11 @@
 package main;
 
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileReader;
+import java.io.BufferedWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 public class Main {
 
@@ -34,7 +34,7 @@ public class Main {
 	public static ArrayList<Floor> getInput(String fileName) {
 		try {
 			
-			BufferedReader input = new BufferedReader(new FileReader(new File(fileName)));
+			BufferedReader input = Files.newBufferedReader(Paths.get(fileName));
 			ArrayList<Floor> layers = new ArrayList<Floor>();
 			Floor level = new Floor();
 			int yLevel = 0;
@@ -191,15 +191,15 @@ public class Main {
 
 		try {
 		oSplit2 = System.currentTimeMillis();
-		FileOutputStream out = new FileOutputStream(file);
+		BufferedWriter out = Files.newBufferedWriter(Paths.get(file));
 		for(int z = 0; z < map.size(); z++) {
 			for(int y = 0; y < map.get(z).size(); y++) {
 				for(int x = 0; x < map.get(z).get(y).size(); x++) {
 					out.write(map.get(z).get(y).get(x));
 				}
-				out.write("\n".getBytes());
+				out.newLine();
 			}
-			out.write("\n".getBytes());
+			out.newLine();
 		}
 		
 		out.close();
