@@ -11,12 +11,21 @@ public class Main {
 	public String fileName;
 
 	public static void main(String[] args) {
-		getInput("b");
+		
+		ArrayList<ArrayList<ArrayList<Character>>> input = getInput("src/resources/in.txt");
+		long start = (long)System.currentTimeMillis();
+		
+		pathFind(input);
+		long elapsed =(long)System.currentTimeMillis()-(long)start;
+		System.out.println(elapsed);
+		
+		
 	}
 
-	public static Character[][][] getInput(String fileName) {
+	public static ArrayList<ArrayList<ArrayList<Character>>> getInput(String fileName) {
 		try {
-			BufferedReader input = new BufferedReader(new FileReader(new File("src/resources/in.txt")));
+			
+			BufferedReader input = new BufferedReader(new FileReader(new File(fileName)));
 			ArrayList<ArrayList<ArrayList<Character>>> layers = new ArrayList<ArrayList<ArrayList<Character>>>();
 			ArrayList<ArrayList<Character>> level = new ArrayList<ArrayList<Character>>();
 			String inputLine;
@@ -32,42 +41,137 @@ public class Main {
 					level = new ArrayList<ArrayList<Character>>();
 				}
 			}
+			layers.add(level);
+			
 			input.close();
-			Character[][][] stringArray = layers.stream()
-					.map(u1 -> u1.stream().map(u2 -> u2.toArray(new Character[0])).toArray(Character[][]::new))
-					.toArray(Character[][][]::new);
-			return stringArray;
+			
+			
+			
+			return layers;
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return null;
 	}
 
-	public static String pathFind(Character[][][] maze) {
-		for(int z = 0; z < maze.length; z++) {
+	static ArrayList<Point> openList;
+	static ArrayList<Point> closedList;
+
+	static ArrayList<ArrayList<ArrayList<Character>>> maze;
+
+	public static String pathFind(ArrayList<ArrayList<ArrayList<Character>>> mazer) {
+		maze = mazer;
+		for (int z = 0; z < maze.size(); z++) {
+			System.out.println("Layer " + z);
 			Coordinate startPos = null;
 			Coordinate endPos = null;
-				for(int y = 0; y < maze[z].length; y++) {
-					for(int x = 0; x < maze[z][y].length; x++) {
-						if(maze[z][y][x] == 'S' || maze[z][y][x] == 'z') {
-							startPos = new Coordinate(x,y);
-						}
-						if(maze[z][y][x] == 'X' || maze[z][y][x] == 'Z') {
-							endPos = new Coordinate(x,y);
-						}
+			for (int y = 0; y < maze.get(z).size(); y++) {
+				for (int x = 0; x < maze.get(z).get(y).size(); x++) {
+					if (maze.get(z).get(y).get(x) == 'S' || maze.get(z).get(y).get(x) == 'z') {
+						startPos = new Coordinate(x, y);
+					}
+					if (maze.get(z).get(y).get(x) == 'X' || maze.get(z).get(y).get(x) == 'Z') {
+						endPos = new Coordinate(x, y);
 					}
 				}
-				
-				ArrayList<Coordinate> openList = new ArrayList<Coordinate>();
-				openList.add(startPos);
-				
-				
-				
-				
-				
-				
-				
 			}
+			System.out.println("Start: " + startPos.x + "," + startPos.y);
+			openList = new ArrayList<Point>();
+			closedList = new ArrayList<Point>();
+			Point startPoint = new Point(null, startPos, 0);
+			closedList.add(startPoint);
+			TryAddOpens(startPoint, endPos, z);
+
+			boolean done = false;
+			Point finalsq = null;
+			while (!done) {
+				Point least = null;
+				for (Point p : openList) {
+					if (least == null || p.cost < least.cost) {
+						least = p;
+					}
+					if (p.coords.x == endPos.x && p.coords.y == endPos.y) {
+						done = true;
+						finalsq = p;
+						break;
+					}
+				}
+				openList.remove(least);
+				closedList.add(least);
+				TryAddOpens(least, endPos, z);
+				if ((least.coords.x == endPos.x && least.coords.y == endPos.y) || openList.size() == 0) {
+					done = true;
+					finalsq = least;
+					if((least.coords.x != endPos.x || least.coords.y != endPos.y)) {
+						System.out.println("No Path!");
+						return null;
+					}
+				}
+			}
+			ArrayList<Coordinate> finalPathBackwards = new ArrayList<Coordinate>();
+			finalPathBackwards.add(finalsq.coords);
+			boolean donePath = false;
+			while (!donePath) {
+				finalsq = finalsq.parent;
+				if (finalsq != null) {
+					finalPathBackwards.add(finalsq.coords);
+				} else {
+					donePath = true;
+				}
+			}
+			ArrayList<Coordinate> finalPath = new ArrayList<Coordinate>();
+			for (int i = finalPathBackwards.size() - 1; i >= 0; i--) {
+				finalPath.add(finalPathBackwards.get(i));
+			}
+
+			for (Coordinate c : finalPath) {
+				System.out.println(c.x + "," + c.y);
+			}
+
+		}
 		return null;
+	}
+
+	private static void TryAddOpens(Point p, Coordinate finish, int z) {
+		if (maze.get(z).get(p.coords.y).get(p.coords.x + 1) != '#') {
+			int cost = Math.abs(((p.coords.x + 1) - finish.x)) + Math.abs(((p.coords.y) - finish.y));
+			TryAddOpen(new Point(p, new Coordinate(p.coords.x + 1, p.coords.y), cost));
+		}
+		if (maze.get(z).get(p.coords.y).get(p.coords.x - 1) != '#') {
+			int cost = Math.abs(((p.coords.x - 1) - finish.x)) + Math.abs(((p.coords.y) - finish.y));
+			TryAddOpen(new Point(p, new Coordinate(p.coords.x - 1, p.coords.y), cost));
+		}
+		if (maze.get(z).get(p.coords.y + 1).get(p.coords.x) != '#') {
+			int cost = Math.abs(((p.coords.x) - finish.x)) + Math.abs(((p.coords.y + 1) - finish.y));
+			TryAddOpen(new Point(p, new Coordinate(p.coords.x, p.coords.y + 1), cost));
+		}
+		if (maze.get(z).get(p.coords.y - 1).get(p.coords.x) != '#') {
+			int cost = Math.abs(((p.coords.x) - finish.x)) + Math.abs(((p.coords.y - 1) - finish.y));
+			TryAddOpen(new Point(p, new Coordinate(p.coords.x, p.coords.y - 1), cost));
+		}
+	}
+
+	private static void TryAddOpen(Point p) {
+		for (Point g : closedList) {
+			if (p.coords.x == g.coords.x && p.coords.y == g.coords.y) {
+				return;
+			}
+		}
+		boolean onOpenList = false;
+		for (Point g : openList) {
+			if (g.coords.x == p.coords.x && g.coords.y == p.coords.y) {
+				if (g.cost > p.cost) {
+					openList.remove(g);
+					break;
+				} else {
+					onOpenList = true;
+					break;
+				}
+			}
+		}
+		if (!onOpenList) {
+			openList.add(p);
+		}
 	}
 }
