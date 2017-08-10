@@ -1,8 +1,6 @@
 package main;
 
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -14,13 +12,13 @@ public class Main {
 	public static void main(String[] args) {
 		
 		long in = System.currentTimeMillis();
-		ArrayList<Floor> input = getInput("src/resources/in.txt");
+		ArrayList<Floor> input = getInput("in.txt");
 		long inE = System.currentTimeMillis()-in;
 		long pather = System.currentTimeMillis();
 		ArrayList<Coordinate> path = pathFind(input);
 		long patherE = System.currentTimeMillis()-pather;
 		long out = System.currentTimeMillis();
-		output("src/resources/out.txt", maze, path);
+		output("out.txt", maze, path);
 		long outE = System.currentTimeMillis()-out;
 		
 		System.out.println("Read Time: " + inE + "ms");
@@ -191,18 +189,23 @@ public class Main {
 
 		try {
 		oSplit2 = System.currentTimeMillis();
-		BufferedWriter out = Files.newBufferedWriter(Paths.get(file));
+		
+		byte[] bytes = new byte[map.get(0).get(0).size() * map.get(0).size() * map.size() + map.size() + map.size() * map.get(0).size()];
+		
+		int count = 0;
+		
 		for(int z = 0; z < map.size(); z++) {
 			for(int y = 0; y < map.get(z).size(); y++) {
 				for(int x = 0; x < map.get(z).get(y).size(); x++) {
-					out.write(map.get(z).get(y).get(x));
+					bytes[count++] = (byte)map.get(z).get(y).get(x).charValue();
 				}
-				out.newLine();
+				bytes[count++] = (byte)'\n';
 			}
-			out.newLine();
+			bytes[count++] = (byte)'\n';
 		}
 		
-		out.close();
+		Files.write(Paths.get(file), bytes);
+
 		oSplit2 = System.currentTimeMillis() - oSplit2;
 		} catch(Exception e) {
 			e.printStackTrace();
