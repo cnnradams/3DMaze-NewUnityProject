@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 
 public class Main {
 
@@ -24,12 +25,11 @@ public class Main {
 		else
 			output("out.txt", maze, path);
 		long outE = System.currentTimeMillis()-out;
-		
 		System.out.println("Read Time: " + inE + "ms");
 		System.out.println("Pathfind Time: " + patherE + "ms");
 		System.out.println("Output: " + outE + "ms");
-		System.out.println("Total Time: " + (inE + patherE + outE) + "ms");
-         System.out.println("Thread Time: " + Main.inE + "ns " + Main.inE2 + "ns");
+		System.out.println("Total Time: " + ((inE + patherE + outE)) + "ms");
+         System.out.println("Thread Time: " + (Main.inE / 1000000) + "ms " + (Main.inE2 / 1000000) + "ms");
 	}
 
 	public static ArrayList<Floor> getInput(String fileName) {
@@ -115,7 +115,7 @@ public class Main {
 	public static class FloorSolver implements Runnable {
 
 	    ArrayList<Point> openList;
-	    ArrayList<Point> closedList;
+	    LinkedHashSet<Point> closedList;
 	    
 	    private final int z;
 	    
@@ -127,7 +127,7 @@ public class Main {
         public void run() {
         	
             openList = new ArrayList<Point>();
-            closedList = new ArrayList<Point>();
+            closedList = new LinkedHashSet<Point>();
             Point startPoint = new Point(null, maze.get(z).startPos, 0);
             closedList.add(startPoint);
             TryAddOpens(startPoint, closedList, openList, maze.get(z).endPos, z);
@@ -177,7 +177,7 @@ public class Main {
         }
 	}
 
-	private static void TryAddOpens(Point p, ArrayList<Point> closedList, ArrayList<Point> openList, Coordinate finish, int z) {
+	private static void TryAddOpens(Point p, LinkedHashSet<Point> closedList, ArrayList<Point> openList, Coordinate finish, int z) {
 		
 		if (maze.get(z).get(p.coords.y).get(p.coords.x + 1) != '#') {
 			int cost = Math.abs(((p.coords.x + 1) - finish.x)) + Math.abs(((p.coords.y) - finish.y)); 
@@ -200,7 +200,7 @@ public class Main {
 	}
 	static long inE = 0;
 	static long inE2 = 0;
-	private static void TryAddOpen(ArrayList<Point> closedList, ArrayList<Point> openList, Point p) {
+	private static void TryAddOpen(LinkedHashSet<Point> closedList, ArrayList<Point> openList, Point p) {
 		
 		long in = System.nanoTime();
 			if (closedList.contains(p)) {
@@ -210,18 +210,15 @@ public class Main {
 		 inE += System.nanoTime()-in;
          long in2 = System.nanoTime();
 		boolean onOpenList = false;
-		for (Point g : openList) {
-			if (g.coords.x == p.coords.x && g.coords.y == p.coords.y) {
+			int i = openList.indexOf(p);
+			if(i != -1) {
+				Point g = openList.get(i);
 				if (g.cost > p.cost) {
-					g.returnPoint();
-					openList.remove(g);
-					break;
+					openList.remove(i);
 				} else {
 					onOpenList = true;
-					break;
 				}
 			}
-		}
 		if (!onOpenList) {
 			openList.add(p);
 		}

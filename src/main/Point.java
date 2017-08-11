@@ -42,18 +42,13 @@ public class Point {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((coords == null) ? 0 : coords.hashCode());
-		result = prime * result + cost;
-		result = prime * result + (inUse ? 1231 : 1237);
-		result = prime * result + index;
-		result = prime * result + ((parent == null) ? 0 : parent.hashCode());
+		result = prime * result + coords.x;
+		result = prime * result + coords.y;
+		result = prime * result + coords.z;
 		return result;
 	}
 	@Override
 	public boolean equals(Object obj) {
 		return coords.equals(((Point)obj).coords);
-	}
-	public void returnPoint() {
-		points.get(index).inUse = false;
 	}
 }
