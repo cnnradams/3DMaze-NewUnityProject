@@ -1,6 +1,7 @@
 package main;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -9,8 +10,8 @@ public class Main {
 
 	public String fileName;
 
+	public static boolean QUICK_OUTPUT = true;
 	public static void main(String[] args) {
-		
 		long in = System.currentTimeMillis();
 		ArrayList<Floor> input = getInput("in.txt");
 		long inE = System.currentTimeMillis()-in;
@@ -18,15 +19,17 @@ public class Main {
 		ArrayList<Coordinate> path = pathFind(input);
 		long patherE = System.currentTimeMillis()-pather;
 		long out = System.currentTimeMillis();
-		output("out.txt", maze, path);
+		if(QUICK_OUTPUT)
+			quickOutput("out.txt", path);
+		else
+			output("out.txt", maze, path);
 		long outE = System.currentTimeMillis()-out;
 		
 		System.out.println("Read Time: " + inE + "ms");
 		System.out.println("Pathfind Time: " + patherE + "ms");
 		System.out.println("Output: " + outE + "ms");
-		System.out.println("   Replace Time: " + oSplit1 + "ms");
-		System.out.println("   Write Time: " + oSplit2 + "ms");
 		System.out.println("Total Time: " + (inE + patherE + outE) + "ms");
+         System.out.println("Thread Time: " + Main.inE + "ns " + Main.inE2 + "ns");
 	}
 
 	public static ArrayList<Floor> getInput(String fileName) {
@@ -77,6 +80,7 @@ public class Main {
 	static volatile ArrayList<ArrayList<Coordinate>> finalPath;
 
 	public static ArrayList<Coordinate> pathFind(ArrayList<Floor> mazer) {
+		
 		maze = mazer;
 		finalPath = new ArrayList<ArrayList<Coordinate>>(maze.size());
 		while(finalPath.size() < maze.size()) finalPath.add(new ArrayList<>());
@@ -121,12 +125,12 @@ public class Main {
 	    
         @Override
         public void run() {
+        	
             openList = new ArrayList<Point>();
             closedList = new ArrayList<Point>();
             Point startPoint = new Point(null, maze.get(z).startPos, 0);
             closedList.add(startPoint);
             TryAddOpens(startPoint, closedList, openList, maze.get(z).endPos, z);
-
             boolean done = false;
             Point finalsq = null;
             while (!done) {
@@ -153,6 +157,7 @@ public class Main {
                     }
                 }
             }
+           
             ArrayList<Coordinate> finalPathBackwards = new ArrayList<Coordinate>();
             finalPathBackwards.add(finalsq.coords);
             boolean donePath = false;
@@ -168,14 +173,17 @@ public class Main {
             for (int i = finalPathBackwards.size() - 1; i >= 0; i--) {
                 finalPath.get(z).add(finalPathBackwards.get(i));
             }
+           
         }
 	}
 
 	private static void TryAddOpens(Point p, ArrayList<Point> closedList, ArrayList<Point> openList, Coordinate finish, int z) {
+		
 		if (maze.get(z).get(p.coords.y).get(p.coords.x + 1) != '#') {
-			int cost = Math.abs(((p.coords.x + 1) - finish.x)) + Math.abs(((p.coords.y) - finish.y));
+			int cost = Math.abs(((p.coords.x + 1) - finish.x)) + Math.abs(((p.coords.y) - finish.y)); 
 			TryAddOpen(closedList, openList, new Point(p, new Coordinate(p.coords.x + 1, p.coords.y, z), cost));
 		}
+	
 		if (maze.get(z).get(p.coords.y).get(p.coords.x - 1) != '#') {
 			int cost = Math.abs(((p.coords.x - 1) - finish.x)) + Math.abs(((p.coords.y) - finish.y));
 			TryAddOpen(closedList, openList, new Point(p, new Coordinate(p.coords.x - 1, p.coords.y, z), cost));
@@ -188,18 +196,24 @@ public class Main {
 			int cost = Math.abs(((p.coords.x) - finish.x)) + Math.abs(((p.coords.y - 1) - finish.y));
 			TryAddOpen(closedList, openList, new Point(p, new Coordinate(p.coords.x, p.coords.y - 1, z), cost));
 		}
+		
 	}
-
+	static long inE = 0;
+	static long inE2 = 0;
 	private static void TryAddOpen(ArrayList<Point> closedList, ArrayList<Point> openList, Point p) {
-		for (Point g : closedList) {
-			if (p.coords.x == g.coords.x && p.coords.y == g.coords.y) {
+		
+		long in = System.nanoTime();
+			if (closedList.contains(p)) {
 				return;
 			}
-		}
+		
+		 inE += System.nanoTime()-in;
+         long in2 = System.nanoTime();
 		boolean onOpenList = false;
 		for (Point g : openList) {
 			if (g.coords.x == p.coords.x && g.coords.y == p.coords.y) {
 				if (g.cost > p.cost) {
+					g.returnPoint();
 					openList.remove(g);
 					break;
 				} else {
@@ -211,20 +225,16 @@ public class Main {
 		if (!onOpenList) {
 			openList.add(p);
 		}
+		inE2 += System.nanoTime() - in2;
 	}
-	static long oSplit1;
-	static long oSplit2;
 	public static void output(String file, ArrayList<Floor> map, ArrayList<Coordinate> path) {
-		oSplit1 = System.currentTimeMillis();
 		for(int i = 0; i < path.size(); i++) {
 			if(map.get(path.get(i).z).get(path.get(i).y).get(path.get(i).x) == ' ') {
 				map.get(path.get(i).z).get(path.get(i).y).set(path.get(i).x, 'P');
 			}
 		}
-		oSplit1 = System.currentTimeMillis() - oSplit1;
 
 		try {
-		oSplit2 = System.currentTimeMillis();
 		
 		byte[] bytes = new byte[map.get(0).get(0).size() * map.get(0).size() * map.size() + map.size() + map.size() * map.get(0).size()];
 		
@@ -242,8 +252,46 @@ public class Main {
 		
 		Files.write(Paths.get(file), bytes);
 
-		oSplit2 = System.currentTimeMillis() - oSplit2;
 		} catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public static void quickOutput(String file, ArrayList<Coordinate> path) {
+		byte[] bytes = new byte[path.size()];
+		int previousX = path.get(0).x;
+		int previousY = path.get(0).y;
+		boolean newL = false;
+		bytes[0] = 'S';
+		for(int i = 1; i < path.size(); i++) {
+			if(path.get(i).x == -1 && path.get(i).y == -1) {
+				bytes[i] = '\n';
+				previousX = path.get(i).x;
+				previousY = path.get(i).y;
+				newL = true;
+				continue;
+			}
+			if(newL) {
+				bytes[i] = 'Z';
+				newL = false;
+				continue;
+			}
+				
+			if(previousY > path.get(i).y)
+				bytes[i] = 'u';
+			else if(previousY < path.get(i).y)
+				bytes[i] = 'd';
+			else if(previousX > path.get(i).x)
+				bytes[i] = 'l';
+			else if(previousX < path.get(i).x)
+				bytes[i] = 'r';
+			previousX = path.get(i).x;
+			previousY = path.get(i).y;
+		}
+		try {
+			Files.write(Paths.get(file), bytes);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
