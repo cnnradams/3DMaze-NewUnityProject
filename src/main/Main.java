@@ -10,7 +10,7 @@ public class Main {
 
 	public String fileName;
 
-	public static boolean QUICK_OUTPUT = true;
+	public static boolean QUICK_OUTPUT = false;
 	public static void main(String[] args) {
 		long in = System.currentTimeMillis();
 		ArrayList<Floor> input = getInput("in.txt");
