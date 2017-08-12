@@ -53,14 +53,14 @@ public class Main {
 					for (int i = 0; i < inputLine.length(); i++) {
 						Character c = inputLine.charAt(i);
 						if (c == 'S') {
-							level.sPoint = new Coordinate(i, yLevel);
+							level.sPoint = new Coordinate(i, yLevel, zLevel+1);
 							startLevel = zLevel;
 						}
 						if (c == 'X') {
-							level.xPoint = new Coordinate(i, yLevel);
+							level.xPoint = new Coordinate(i, yLevel, zLevel+1);
 						}
 						if (c == 'z' || c == 'Z') {
-							level.stairs.add(new Coordinate(i, yLevel));
+							level.stairs.add(new Coordinate(i, yLevel, zLevel+1));
 						}
 						charList.add(inputLine.charAt(i));
 					}
@@ -103,12 +103,16 @@ public class Main {
 
 	public static void DelegateFloors(int z, Coordinate startPos, ArrayList<Coordinate> pastPath) {
 		ArrayList<Thread> threads = new ArrayList<>();
-		System.out.println(maze.get(1).stairs.size());
+		//System.out.println(maze.get(z).stairs);
+		System.out.println(maze.get(z).stairs.size() + "," + z);
 		for (int i = 0; i < maze.get(z).stairs.size(); i++) {
 			if (!maze.get(z).stairs.get(i).equals(startPos)) {
+				//System.out.println(startPos + "," + maze.get(z).stairs.get(i));
 				threads.add(new Thread(new FloorSolver(z, startPos, maze.get(z).stairs.get(i), pastPath)));
 				threads.get(threads.size() - 1).start();
+				//System.out.println(startPos + "," + maze.get(z).stairs.get(i));
 			}
+			
 		}
 		boolean done = false;
 		while (!done) {
@@ -120,10 +124,10 @@ public class Main {
 					ArrayList<Coordinate> thisResult = result.get(thread);
 					if (thisResult != null) {
 						Coordinate endPoint = thisResult.get(thisResult.size() - 1);
+						maze.get(z).stairs.remove(endPoint);
 						if (maze.get(z).get(endPoint.y).get(endPoint.x) == 'z') {
 							DelegateFloors(z - 1, endPoint, thisResult);
 						} else if (maze.get(z).get(endPoint.y).get(endPoint.x) == 'Z') {
-							System.out.println(z + 1);
 							DelegateFloors(z + 1, endPoint, thisResult);
 						} else if (maze.get(z).get(endPoint.y).get(endPoint.x) == 'X') {
 							finalPath = thisResult;
@@ -156,6 +160,7 @@ public class Main {
 		@Override
 		public void run() {
 			try {
+				
 			openList = new ArrayList<Point>();
 			closedList = new LinkedHashSet<Point>();
 			Point startPoint = new Point(null, startPos, 0);
@@ -183,14 +188,14 @@ public class Main {
 				
 				TryAddOpens(least, closedList, openList, endPos, z);
 				long in2 = System.nanoTime();
-				if ((least.coords.x == endPos.x && least.coords.y == endPos.y) || openList.size() == 0) {
+				if(openList.size() == 0) {
+					//System.out.println("No Path!" + "," + startPos + "," + endPos);
+					result.put(Thread.currentThread(), null);
+					return;
+				}
+				if ((least.coords.x == endPos.x && least.coords.y == endPos.y)) {
 					done = true;
 					finalsq = least;
-					if ((least.coords.x != endPos.x || least.coords.y != endPos.y)) {
-						System.out.println("No Path!");
-						result.put(Thread.currentThread(), null);
-						return;
-					}
 				}
 				inE2 += System.nanoTime() - in2;
 			}
