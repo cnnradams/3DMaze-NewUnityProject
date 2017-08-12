@@ -39,6 +39,11 @@ public class Point {
 		return newP;
 	}
 	@Override
+	public String toString() {
+		return "Point [parent=" + parent + ", cost=" + cost + ", coords=" + coords + ", inUse=" + inUse + ", index="
+				+ index + "]";
+	}
+	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;

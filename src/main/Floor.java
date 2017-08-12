@@ -18,6 +18,6 @@ public class Floor {
 		return floor.size();
 	}
 	public ArrayList<Character> get(int index) {
-		return floor.get(index);
+			return floor.get(index);
 	}
 }

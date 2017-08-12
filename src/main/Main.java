@@ -66,7 +66,7 @@ public class Main {
 					}
 					yLevel++;
 					level.add(charList);
-				} else if(previous = true) {
+				} else if(previous == true) {
 					continue;
 				} else {
 					previous = true;
@@ -102,12 +102,12 @@ public class Main {
 	}
 
 	public static void DelegateFloors(int z, Coordinate startPos, ArrayList<Coordinate> pastPath) {
-		ArrayList<Thread> threads = new ArrayList<>(maze.size());
-
+		ArrayList<Thread> threads = new ArrayList<>();
+		System.out.println(maze.get(1).stairs.size());
 		for (int i = 0; i < maze.get(z).stairs.size(); i++) {
 			if (!maze.get(z).stairs.get(i).equals(startPos)) {
 				threads.add(new Thread(new FloorSolver(z, startPos, maze.get(z).stairs.get(i), pastPath)));
-				threads.get(i).start();
+				threads.get(threads.size() - 1).start();
 			}
 		}
 		boolean done = false;
@@ -123,6 +123,7 @@ public class Main {
 						if (maze.get(z).get(endPoint.y).get(endPoint.x) == 'z') {
 							DelegateFloors(z - 1, endPoint, thisResult);
 						} else if (maze.get(z).get(endPoint.y).get(endPoint.x) == 'Z') {
+							System.out.println(z + 1);
 							DelegateFloors(z + 1, endPoint, thisResult);
 						} else if (maze.get(z).get(endPoint.y).get(endPoint.x) == 'X') {
 							finalPath = thisResult;
@@ -154,12 +155,13 @@ public class Main {
 
 		@Override
 		public void run() {
+			try {
 			openList = new ArrayList<Point>();
 			closedList = new LinkedHashSet<Point>();
 			Point startPoint = new Point(null, startPos, 0);
 			closedList.add(startPoint);
 			TryAddOpens(startPoint, closedList, openList, endPos, z);
-
+			
 			boolean done = false;
 			Point finalsq = null;
 			while (!done) {
@@ -178,6 +180,7 @@ public class Main {
 				inE += System.nanoTime() - in;
 				openList.remove(least);
 				closedList.add(least);
+				
 				TryAddOpens(least, closedList, openList, endPos, z);
 				long in2 = System.nanoTime();
 				if ((least.coords.x == endPos.x && least.coords.y == endPos.y) || openList.size() == 0) {
@@ -209,14 +212,18 @@ public class Main {
 				thisPath.add(finalPathBackwards.get(i));
 			}
 			result.put(Thread.currentThread(), thisPath);
+		}catch(Exception e) {
+			e.printStackTrace();
+		}
 		}
 	}
 
 	private static void TryAddOpens(Point p, LinkedHashSet<Point> closedList, ArrayList<Point> openList,
 			Coordinate finish, int z) {
-		System.out.println(maze.get(z).floor);
+		if(p != null) {
+		//System.out.println(maze.get(z).floor.size() < (p.coords.y));
 		//System.out.println(maze.get(z).get(p.coords.y).contains(p.coords.x + 1));
-		if (maze.get(z).get(p.coords.y).contains(p.coords.x + 1)) {
+		if (maze.get(z).get(p.coords.y).size() > p.coords.x + 1) {
 			if (maze.get(z).get(p.coords.y).get(p.coords.x + 1) == ' '
 					|| maze.get(z).get(p.coords.y).get(p.coords.x + 1) == 'z'
 					|| maze.get(z).get(p.coords.y).get(p.coords.x + 1) == 'Z'
@@ -226,7 +233,7 @@ public class Main {
 				TryAddOpen(closedList, openList, new Point(p, new Coordinate(p.coords.x + 1, p.coords.y, z), cost));
 			}
 		}
-		if (maze.get(z).get(p.coords.y).contains(p.coords.x - 1)) {
+		if (p.coords.x > 0) {
 			if (maze.get(z).get(p.coords.y).get(p.coords.x - 1) == ' '
 					|| maze.get(z).get(p.coords.y).get(p.coords.x - 1) == 'z'
 					|| maze.get(z).get(p.coords.y).get(p.coords.x - 1) == 'Z'
@@ -236,7 +243,7 @@ public class Main {
 				TryAddOpen(closedList, openList, new Point(p, new Coordinate(p.coords.x - 1, p.coords.y, z), cost));
 			}
 		}
-		if (maze.get(z).floor.contains(p.coords.y + 1)) {
+		if (maze.get(z).floor.size() > p.coords.y + 1) {
 			if (maze.get(z).get(p.coords.y + 1).get(p.coords.x) == ' '
 					|| maze.get(z).get(p.coords.y + 1).get(p.coords.x) == 'z'
 					|| maze.get(z).get(p.coords.y + 1).get(p.coords.x) == 'Z'
@@ -246,15 +253,16 @@ public class Main {
 				TryAddOpen(closedList, openList, new Point(p, new Coordinate(p.coords.x, p.coords.y + 1, z), cost));
 			}
 		}
-		if (maze.get(z).floor.contains(p.coords.y - 1)) {
+		if (p.coords.y > 0) {
 			if (maze.get(z).get(p.coords.y - 1).get(p.coords.x) == ' '
-					|| maze.get(z).get(p.coords.y + 1).get(p.coords.x) == 'z'
-					|| maze.get(z).get(p.coords.y + 1).get(p.coords.x) == 'Z'
-					|| maze.get(z).get(p.coords.y + 1).get(p.coords.x) == 'S'
-					|| maze.get(z).get(p.coords.y + 1).get(p.coords.x) == 'X') {
+					|| maze.get(z).get(p.coords.y - 1).get(p.coords.x) == 'z'
+					|| maze.get(z).get(p.coords.y - 1).get(p.coords.x) == 'Z'
+					|| maze.get(z).get(p.coords.y - 1).get(p.coords.x) == 'S'
+					|| maze.get(z).get(p.coords.y - 1).get(p.coords.x) == 'X') {
 				int cost = Math.abs(((p.coords.x) - finish.x)) + Math.abs(((p.coords.y - 1) - finish.y));
 				TryAddOpen(closedList, openList, new Point(p, new Coordinate(p.coords.x, p.coords.y - 1, z), cost));
 			}
+		}
 		}
 	}
 

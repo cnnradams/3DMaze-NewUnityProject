@@ -4,6 +4,10 @@ import java.util.Arrays;
 
 public class Coordinate {
 
+	@Override
+	public String toString() {
+		return "Coordinate [x=" + x + ", y=" + y + ", z=" + z + "]";
+	}
 	public int x;
 	public int y;
 	public int z;
