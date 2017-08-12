@@ -56,10 +56,7 @@ public class Main {
 							level.sPoint = new Coordinate(i, yLevel, zLevel+1);
 							startLevel = zLevel;
 						}
-						if (c == 'X') {
-							level.xPoint = new Coordinate(i, yLevel, zLevel+1);
-						}
-						if (c == 'z' || c == 'Z') {
+						if (c == 'z' || c == 'Z' || c == 'X') {
 							level.stairs.add(new Coordinate(i, yLevel, zLevel+1));
 						}
 						charList.add(inputLine.charAt(i));
