@@ -40,8 +40,7 @@ public class Point {
 	}
 	@Override
 	public String toString() {
-		return "Point [parent=" + parent + ", cost=" + cost + ", coords=" + coords + ", inUse=" + inUse + ", index="
-				+ index + "]";
+		return coords.toString();
 	}
 	@Override
 	public int hashCode() {

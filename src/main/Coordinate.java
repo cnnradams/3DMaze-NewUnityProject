@@ -1,7 +1,5 @@
 package main;
 
-import java.util.Arrays;
-
 public class Coordinate {
 
 	@Override
@@ -31,6 +29,6 @@ public class Coordinate {
 	}
 	@Override
 	public boolean equals(Object obj) {
-		return ((Coordinate)obj).x == x && ((Coordinate)obj).y == y;
+		return ((Coordinate)obj).x == x && ((Coordinate)obj).y == y && ((Coordinate)obj).z == z;
 	}
 }
