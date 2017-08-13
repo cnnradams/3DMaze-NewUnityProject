@@ -22,7 +22,7 @@ public class Main {
 	public static final String OUTPUT_FILE_NAME = "out.txt";
 
 	// TODO: Make the quickOutput function what the judges want to see
-	public static final boolean QUICK_OUTPUT = false;
+	public static final boolean QUICK_OUTPUT = true;
 
 	public static void main(String[] args) {
 
@@ -33,7 +33,7 @@ public class Main {
 		
 		long inputTimingEnd = System.currentTimeMillis() - inputTimingStart;
 
-		
+		new LinkedHashSet<Integer>().contains(1);
 		long pathfindTimingStart = System.currentTimeMillis();
 		
 		// Works with the input to create a list of coordinates you would need to travel to to pathfind
@@ -124,6 +124,7 @@ public class Main {
 							
 							charList.add(inputLine.charAt(i));
 						}
+						
 						// Add the row to the floor and then get ready for the next row
 						level.add(charList);
 						yLevel++;
@@ -160,7 +161,7 @@ public class Main {
 		// If something ever gets here I will quit programming forever
 		return null;
 	}
-
+	static long inE2 = 0;
 	/**
 	 * This is where the pathfinding really happens (A*)
 	 * 
@@ -170,7 +171,7 @@ public class Main {
 	public static ArrayList<Coordinate> pathFind(ArrayList<ArrayList<ArrayList<Character>>> maze) {
 		
 		// Open list to store potential paths
-		LinkedHashSet<Point> openList = new LinkedHashSet<Point>();
+		OpenList openList = new OpenList();
 		
 		// Closed list to store actual path
 		LinkedHashSet<Point> closedList = new LinkedHashSet<Point>();
@@ -190,17 +191,8 @@ public class Main {
 		// Loops until broken
 		while (true) {
 			
-			// Finds the least costly choice of movement from the openlist
-			// Funny story, java 8 can do this with stream.reduce(), but this way is 15x FASTER!!!
-			Point least = null;
-			for (Point p : openList) {
-				if (least == null || p.cost < least.cost) {
-					least = p;
-				}
-			}
-			
 			// Its no longer a potential tile, it's now discovered
-			openList.remove(least);
+			 Point least = openList.remove();
 			closedList.add(least);
 			
 			// If it made it to the target
@@ -219,8 +211,9 @@ public class Main {
 				System.out.println("No Path");
 				System.exit(0);
 			}
+			
 		}
-
+		
 		// Follows the parent chain of finalP all the way back to the start, the most efficient path
 		ArrayList<Coordinate> finalPath = new ArrayList<Coordinate>();
 		finalPath.add(finalP.coords);
@@ -235,7 +228,7 @@ public class Main {
 		// We made it!
 		return finalPath;
 	}
-
+	
 	/**
 	 * Tries all 6 possible directions around a specific point, calls TryAddOpen on each
 	 * 
@@ -245,18 +238,20 @@ public class Main {
 	 * @param finish The end goal for calculating cost
 	 * @param maze The 3d map of input
 	 */
-	private static void TryAddOpens(Point point, LinkedHashSet<Point> closedList, LinkedHashSet<Point> openList,
+	private static void TryAddOpens(Point point, LinkedHashSet<Point> closedList, OpenList openList,
 			Coordinate finish, ArrayList<ArrayList<ArrayList<Character>>> maze) {
-
+		
+		
 			// Right, checks if in bounds and if not #
 			if (maze.get(point.coords.z).get(point.coords.y).size() > point.coords.x + 1) {
 				if (maze.get(point.coords.z).get(point.coords.y).get(point.coords.x + 1) != '#') {
 					
 					// Calculates cost based on direct distance to target (without pythagorean since there is no diagnol)
 					int cost = Math.abs(point.coords.x + 1 - finish.x) + Math.abs(point.coords.y - finish.y) + Math.abs(point.coords.z - finish.z);
-					
+
 					// Tries to add to open list
 					TryAddOpen(closedList, openList, new Point(point, new Coordinate(point.coords.x + 1, point.coords.y, point.coords.z), cost));
+					
 				}
 			}
 			
@@ -324,12 +319,14 @@ public class Main {
 	 * @param openList The current open list
 	 * @param point The point we want to add
 	 */
-	private static void TryAddOpen(LinkedHashSet<Point> closedList, LinkedHashSet<Point> openList, Point point) {
+	private static void TryAddOpen(LinkedHashSet<Point> closedList, OpenList openList, Point point) {
+
 		// If the closedList or openList has point we can't add it to openList
 		if (closedList.contains(point) || openList.contains(point))
 			return;
 		else
 			openList.add(point);
+		
 	}
 
 	/**
@@ -352,7 +349,7 @@ public class Main {
 
 			// Makes a byte array to instantly write to file
 			byte[] bytes = new byte[map.get(0).get(0).size() * map.get(0).size() * map.size() + map.size()
-					+ map.size() * map.get(0).size()];
+					+ map.size() * map.get(0).size() + 3];
 
 			// Keeps track of bytes
 			int count = 0;
@@ -385,41 +382,37 @@ public class Main {
 	public static void quickOutput(String file, ArrayList<Coordinate> path) {
 		
 		// Creates a byte array with one byte allocated for each coordinate on the path
-		byte[] bytes = new byte[path.size()];
+		byte[] bytes = new byte[path.size() * 2 - 3];
 		
 		// Stores the previous X and Y to see if it should go left, right, up, or down
 		int previousX = path.get(0).x;
 		int previousY = path.get(0).y;
+		int previousZ = path.get(0).z;
+		int count = 0;
 		
-		//TODO: Make everything past here work with actual mazes
-		
-		boolean newL = false;
-		
-		bytes[0] = 'S';
+		// Loops through the path and finds which direction the program took
 		for (int i = 1; i < path.size(); i++) {
-			if (path.get(i).x == -1 && path.get(i).y == -1) {
-				bytes[i] = '\n';
-				previousX = path.get(i).x;
-				previousY = path.get(i).y;
-				newL = true;
-				continue;
-			}
-			if (newL) {
-				bytes[i] = 'Z';
-				newL = false;
-				continue;
-			}
 
 			if (previousY > path.get(i).y)
-				bytes[i] = 'u';
+				bytes[count++] = 'u';
 			else if (previousY < path.get(i).y)
-				bytes[i] = 'd';
+				bytes[count++] = 'd';
 			else if (previousX > path.get(i).x)
-				bytes[i] = 'l';
+				bytes[count++] = 'l';
 			else if (previousX < path.get(i).x)
-				bytes[i] = 'r';
+				bytes[count++] = 'r';
+			else if(previousZ > path.get(i).z)
+				bytes[count++] = 'z';
+			else if(previousZ < path.get(i).z)
+				bytes[count++] = 'Z';
+
+			if(count+1 < bytes.length)
+				bytes[count++] = ',';
+			
 			previousX = path.get(i).x;
 			previousY = path.get(i).y;
+			previousZ = path.get(i).z;
+
 		}
 		try {
 			Files.write(Paths.get(file), bytes);
