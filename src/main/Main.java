@@ -5,278 +5,358 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 
+/**
+ * 
+ * @author NewUnityProject Team
+ *
+ * Main class for 3D maze pathfinding, 
+ * including timings and file input/output
+ * Created using A* but in three dimensions
+ */
 public class Main {
 
-	public String fileName;
+	// Root folder outputs so it works in a JAR
+	public static final String INPUT_FILE_NAME = "in.txt";
+	public static final String OUTPUT_FILE_NAME = "out.txt";
 
-	public static boolean QUICK_OUTPUT = false;
+	// TODO: Make the quickOutput function what the judges want to see
+	public static final boolean QUICK_OUTPUT = false;
 
 	public static void main(String[] args) {
-		long in = System.currentTimeMillis();
-		ArrayList<Floor> input = getInput("in.txt");
-		long inE = System.currentTimeMillis() - in;
-		long pather = System.currentTimeMillis();
+
+		long inputTimingStart = System.currentTimeMillis();
+		
+		// Gets input as a 3 dimensional array of chars
+		ArrayList<ArrayList<ArrayList<Character>>> input = getInput(INPUT_FILE_NAME);
+		
+		long inputTimingEnd = System.currentTimeMillis() - inputTimingStart;
+
+		
+		long pathfindTimingStart = System.currentTimeMillis();
+		
+		// Works with the input to create a list of coordinates you would need to travel to to pathfind
 		ArrayList<Coordinate> path = pathFind(input);
-		long patherE = System.currentTimeMillis() - pather;
-		long out = System.currentTimeMillis();
+		
+		long pathfindTimingEnd = System.currentTimeMillis() - pathfindTimingStart;
+		
+		
+		long outputTimingStart = System.currentTimeMillis();
+		
+		// Works with the coordinate path to quickly place ups, rights, lefts, and downs into the file
 		if (QUICK_OUTPUT)
-			quickOutput("out.txt", path);
+			quickOutput(OUTPUT_FILE_NAME, path);
+		
+		// Prints the whole maze but with each coordinate in the path turned into a P
 		else
-			output("out.txt", maze, path);
-		long outE = System.currentTimeMillis() - out;
-		System.out.println("Read Time: " + inE + "ms");
-		System.out.println("Pathfind Time: " + patherE + "ms");
-		System.out.println("Output Time: " + outE + "ms");
-		System.out.println("Total Time: " + ((inE + patherE + outE)) + "ms");
-		System.out.println("Thread Time: " + (Main.inE / 1000000) + "ms " + (Main.inE2 / 1000000) + "ms");
+			output(OUTPUT_FILE_NAME, input, path);
+		
+		long outputTimingEnd = System.currentTimeMillis() - outputTimingStart;
+
+		System.out.println("Input read from " + INPUT_FILE_NAME + ", Output written to " + OUTPUT_FILE_NAME + ".\n");
+		
+		// Prints time taken for each step and total in miliseconds
+		System.out.println("Read Time: " + inputTimingEnd + "ms");
+		System.out.println("Pathfind Time: " + pathfindTimingEnd + "ms");
+		System.out.println("Output Time: " + outputTimingEnd + "ms");
+		System.out.println("Total Time: " + ((inputTimingEnd + pathfindTimingEnd + outputTimingEnd)) + "ms");
 	}
-	
+
+	// Global starting and ending position of the mazer (S and X)
 	static Coordinate startPos;
 	static Coordinate endPos;
-	public static ArrayList<Floor> getInput(String fileName) {
-		try {
-			boolean previous = false;
-			int zLevel = 0;
-			BufferedReader input = Files.newBufferedReader(Paths.get(fileName));
-			ArrayList<Floor> layers = new ArrayList<Floor>();
-			Floor level = new Floor();
-			int yLevel = 0;
-			String inputLine;
-			while ((inputLine = input.readLine()) != null) {
 
-				if (inputLine.length() != 0) {
-					previous = false;
-					ArrayList<Character> charList = new ArrayList<Character>();
-					for (int i = 0; i < inputLine.length(); i++) {
-						Character c = inputLine.charAt(i);
-						if (c == 'S') {
-							startPos = new Coordinate(i, yLevel, zLevel);
+	/**
+	 * Gets the maze as input from a .txt file
+	 * 
+	 * @param fileName Name of the file to pull from
+	 * @return A 3 Dimensional array of each character in the file
+	 */
+	public static ArrayList<ArrayList<ArrayList<Character>>> getInput(String fileName) {
+		
+			try {
+			
+			// Opens the file in a reader so we can get the input
+			BufferedReader input = Files.newBufferedReader(Paths.get(fileName));
+			
+			// Boolean used to skip double whitespace inbetween floors so the program 
+			// doesn't think the second is a new floor when its really just blank 
+			boolean previous = false;
+			
+			// Stores the current floor being read, increased whenever the program encounters an empty line
+			int zLevel = 0;
+			
+			// Storage for the whole maze
+			ArrayList<ArrayList<ArrayList<Character>>> layers = new ArrayList<ArrayList<ArrayList<Character>>>();
+			
+			// Storage for the singular floor, eventually added to the whole maze
+			ArrayList<ArrayList<Character>> level = new ArrayList<ArrayList<Character>>();
+			
+			// The current Y level, increased after every line but reset when zLevel increases
+			int yLevel = 0;
+			
+			// The line input from in.txt
+			String inputLine;
+			
+				// Works through every single line until there are none left
+				while ((inputLine = input.readLine()) != null) {
+
+					// If there is content in the line
+					if (inputLine.length() != 0) {
+						
+						// Since it's not whitespace, we can accept the next whitespace as a new floor
+						previous = false;
+						
+						// Annoyingly enough you can't convert a String to an ArrayList<Character>,
+						// so we have to do it manually (you can in java 8 but I dont like java 8 stuff)
+						ArrayList<Character> charList = new ArrayList<Character>();
+						
+						// Loops through every char in the String
+						for (int i = 0; i < inputLine.length(); i++) {
+							Character c = inputLine.charAt(i);
+							
+							// If it's S or X you now know where the start and end of the maze is
+							if (c == 'S')
+								startPos = new Coordinate(i, yLevel, zLevel);
+							else if (c == 'X') 
+								endPos = new Coordinate(i, yLevel, zLevel);
+							
+							charList.add(inputLine.charAt(i));
 						}
-						if (c == 'X') {
-							endPos = new Coordinate(i, yLevel, zLevel);
-						}
-						charList.add(inputLine.charAt(i));
+						// Add the row to the floor and then get ready for the next row
+						level.add(charList);
+						yLevel++;
+					} else if (previous == true) {
+						// Ignore the double blank row
+						continue;
+					} else {
+						// Prepare for double blank row
+						previous = true;
+						
+						// Reset y, get a new floor
+						yLevel = 0;
+						zLevel++;
+						
+						// Add the floor to the full array
+						layers.add(level);
+						level = new ArrayList<ArrayList<Character>>();
 					}
-					yLevel++;
-					level.add(charList);
-				} else if(previous == true) {
-					continue;
-				} else {
-					previous = true;
-					yLevel = 0;
-					zLevel++;
-					layers.add(level);
-					level = new Floor();
 				}
-			} 
+			
+			// Add the last floor
 			layers.add(level);
 
 			input.close();
 
 			return layers;
+			
+			} catch(IOException io) {
+				System.out.println("Getting input from " + fileName + " failed: ");
+				io.printStackTrace();
+				System.exit(0);
+			}
 
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		// If something ever gets here I will quit programming forever
 		return null;
 	}
 
-	static volatile ArrayList<Floor> maze;
-	static volatile ArrayList<Coordinate> finalPath;
-
-	public static ArrayList<Coordinate> pathFind(ArrayList<Floor> mazer) {
-		maze = mazer;
-		finalPath = new ArrayList<Coordinate>();
-		ArrayList<Thread> threads = new ArrayList<>();
-		new FloorSolver(startPos, endPos).run();
-		//threads.get(threads.size() - 1).start();
+	/**
+	 * This is where the pathfinding really happens (A*)
+	 * 
+	 * @param maze the 3d map
+	 * @return the path to take
+	 */
+	public static ArrayList<Coordinate> pathFind(ArrayList<ArrayList<ArrayList<Character>>> maze) {
 		
-		boolean done = false;
-		while (!done) {
-			done = true;
-			for (Thread thread : threads) {
-				if (thread.isAlive()) {
-					done = false;
+		// Open list to store potential paths
+		LinkedHashSet<Point> openList = new LinkedHashSet<Point>();
+		
+		// Closed list to store actual path
+		LinkedHashSet<Point> closedList = new LinkedHashSet<Point>();
+		
+		// Begins with the starting point that has no parent
+		Point startPoint = new Point(null, startPos, 0);
+		
+		// Tiles we've checked around them for paths
+		closedList.add(startPoint);
+		
+		// Tries to add its 6 neighbouring tiles to the open list for further pathfinding
+		TryAddOpens(startPoint, closedList, openList, endPos, maze);
+
+		// The final point
+		Point finalP = null;
+		
+		// Loops until broken
+		while (true) {
+			
+			// Finds the least costly choice of movement from the openlist
+			Point least = null;
+			for (Point p : openList) {
+				if (least == null || p.cost < least.cost) {
+					least = p;
 				}
 			}
+			
+			// Its no longer a potential tile, it's now discovered
+			openList.remove(least);
+			closedList.add(least);
+			
+			// If it made it to the target
+			if (least.coords.equals(endPos)) {
+				// We made it so stop looping now
+				finalP = least;
+				break;
+			}
+			
+			// Sees where this cheap tile will lead
+			TryAddOpens(least, closedList, openList, endPos, maze);
+			
+			// If least was the last in the openlist and found nothing tryable around it
+			if (openList.size() == 0) {
+				// Ran out of possible paths, we give up!
+				System.out.println("No Path");
+				System.exit(0);
+			}
 		}
+
+		// Follows the parent chain of finalP all the way back to the start, the most efficient path
+		ArrayList<Coordinate> finalPath = new ArrayList<Coordinate>();
+		finalPath.add(finalP.coords);
+		while (true) {
+			finalP = finalP.parent;
+			if (finalP != null)
+				finalPath.add(0, finalP.coords);
+			else
+				break;
+		}
+		
+		// We made it!
 		return finalPath;
 	}
 
-	public static class FloorSolver implements Runnable {
+	/**
+	 * Tries all 6 possible directions around a specific point, calls TryAddOpen on each
+	 * 
+	 * @param point The starting point
+	 * @param closedList For TryAddOpen()
+	 * @param openList For TryAddOpen()
+	 * @param finish The end goal for calculating cost
+	 * @param maze The 3d map of input
+	 */
+	private static void TryAddOpens(Point point, LinkedHashSet<Point> closedList, LinkedHashSet<Point> openList,
+			Coordinate finish, ArrayList<ArrayList<ArrayList<Character>>> maze) {
 
-		ArrayList<Point> openList;
-		LinkedHashSet<Point> closedList;
-		private final Coordinate startPos;
-		private final Coordinate endPos;
-
-		public FloorSolver(Coordinate startPos, Coordinate endPos) {
-			this.startPos = startPos;
-			this.endPos = endPos;
-		}
-
-		@Override
-		public void run() {
-			try {
-				
-			openList = new ArrayList<Point>();
-			closedList = new LinkedHashSet<Point>();
-			Point startPoint = new Point(null, startPos, 0);
-			closedList.add(startPoint);
-			TryAddOpens(startPoint, closedList, openList, endPos);
+			// Right, checks if in bounds and if not #
+			if (maze.get(point.coords.z).get(point.coords.y).size() > point.coords.x + 1) {
+				if (maze.get(point.coords.z).get(point.coords.y).get(point.coords.x + 1) != '#') {
+					
+					// Calculates cost based on direct distance to target (without pythagorean since there is no diagnol)
+					int cost = Math.abs(point.coords.x + 1 - finish.x) + Math.abs(point.coords.y - finish.y) + Math.abs(point.coords.z - finish.z);
+					
+					// Tries to add to open list
+					TryAddOpen(closedList, openList, new Point(point, new Coordinate(point.coords.x + 1, point.coords.y, point.coords.z), cost));
+				}
+			}
 			
-			boolean done = false;
-			Point finalsq = null;
-			while (!done) {
-				long in = System.nanoTime();
-				Point least = null;
-				for (Point p : openList) {
-					if (least == null || p.cost < least.cost) {
-						least = p;
-					}
-					if (p.coords == endPos) {
-						done = true;
-						finalsq = p;
-						break;
-					}
-				}
-				inE += System.nanoTime() - in;
-				openList.remove(least);
-				closedList.add(least);
-				TryAddOpens(least, closedList, openList, endPos);
-				long in2 = System.nanoTime();
-				if(openList.size() == 0) {
-					System.out.println("No Path");
-					return;
-				}
-				if ((least.coords.x == endPos.x && least.coords.y == endPos.y && least.coords.z == endPos.z)) {
-					done = true;
-					finalsq = least;
-				}
-				inE2 += System.nanoTime() - in2;
-			}
-
-			ArrayList<Coordinate> finalPathBackwards = new ArrayList<Coordinate>();
-			finalPathBackwards.add(finalsq.coords);
-			boolean donePath = false;
-			while (!donePath) {
-				finalsq = finalsq.parent;
-				if (finalsq != null) {
-					finalPathBackwards.add(finalsq.coords);
-				} else {
-					donePath = true;
+			// Left, checks if in bounds and if not #
+			if (point.coords.x > 0) {
+				if (maze.get(point.coords.z).get(point.coords.y).get(point.coords.x - 1) != '#') {
+					
+					// Calculates cost based on direct distance to target (without pythagorean since there is no diagnol)
+					int cost = Math.abs(point.coords.x - 1 - finish.x) + Math.abs(point.coords.y - finish.y) + Math.abs(point.coords.z - finish.z);
+					
+					// Tries to add to open list
+					TryAddOpen(closedList, openList, new Point(point, new Coordinate(point.coords.x - 1, point.coords.y, point.coords.z), cost));
 				}
 			}
-			//thisPath.addAll(pastPath);
-			for (int i = finalPathBackwards.size() - 1; i >= 0; i--) {
-				finalPath.add(finalPathBackwards.get(i));
+			
+			// Down, checks if in bounds and if not #
+			if (maze.get(point.coords.z).size() > point.coords.y + 1) {
+				if (maze.get(point.coords.z).get(point.coords.y + 1).get(point.coords.x) != '#') {
+					
+					// Calculates cost based on direct distance to target (without pythagorean since there is no diagnol)
+					int cost = Math.abs(((point.coords.x) - finish.x))+ Math.abs(((point.coords.y + 1) - finish.y) + Math.abs(((point.coords.z) - finish.z)));
+					
+					// Tries to add to open list
+					TryAddOpen(closedList, openList, new Point(point, new Coordinate(point.coords.x, point.coords.y + 1, point.coords.z), cost));
+				}
 			}
-		}catch(Exception e) {
-			e.printStackTrace();
-		}
-		}
+			
+			// Up, checks if in bounds and if not #
+			if (point.coords.y > 0) {
+				if (maze.get(point.coords.z).get(point.coords.y - 1).get(point.coords.x) != '#') {
+					
+					// Calculates cost based on direct distance to target (without pythagorean since there is no diagnol)
+					int cost = Math.abs(point.coords.x - finish.x) + Math.abs(point.coords.y - 1 - finish.y) + Math.abs(point.coords.z - finish.z);
+					
+					// Tries to add to open list
+					TryAddOpen(closedList, openList, new Point(point, new Coordinate(point.coords.x, point.coords.y - 1, point.coords.z), cost));
+				}
+			}
+			
+			// Through, checks if z
+			if (maze.get(point.coords.z).get(point.coords.y).get(point.coords.x) == 'z') {
+				
+				// Calculates cost based on direct distance to target (without pythagorean since there is no diagnol)
+				int cost = Math.abs(point.coords.x - finish.x) + Math.abs(point.coords.y - finish.y) + Math.abs(point.coords.z - 1 - finish.z);
+				
+				// Tries to add to open list
+				TryAddOpen(closedList, openList, new Point(point, new Coordinate(point.coords.x, point.coords.y, point.coords.z - 1), cost));
+			}
+			
+			// Out, checks if Z
+			if (maze.get(point.coords.z).get(point.coords.y).get(point.coords.x) == 'Z') {
+				
+				// Calculates cost based on direct distance to target (without pythagorean since there is no diagnol)
+				int cost = Math.abs(point.coords.x - finish.x) + Math.abs(point.coords.y - finish.y) + Math.abs(point.coords.z + 1 - finish.z);
+				
+				// Tries to add to open list
+				TryAddOpen(closedList, openList, new Point(point, new Coordinate(point.coords.x, point.coords.y, point.coords.z + 1), cost));
+			}
 	}
 
-	private static void TryAddOpens(Point p, LinkedHashSet<Point> closedList, ArrayList<Point> openList,
-			Coordinate finish) {
-		if(p != null) {
-		//System.out.println(maze.get(z).floor.size() < (p.coords.y));
-		//System.out.println(maze.get(z).get(p.coords.y).contains(p.coords.x + 1));
-		if (maze.get(p.coords.z).get(p.coords.y).size() > p.coords.x + 1) {
-			if (maze.get(p.coords.z).get(p.coords.y).get(p.coords.x + 1) == ' '
-					|| maze.get(p.coords.z).get(p.coords.y).get(p.coords.x + 1) == 'z'
-					|| maze.get(p.coords.z).get(p.coords.y).get(p.coords.x + 1) == 'Z'
-					|| maze.get(p.coords.z).get(p.coords.y).get(p.coords.x + 1) == 'S'
-					|| maze.get(p.coords.z).get(p.coords.y).get(p.coords.x + 1) == 'X') {
-				int cost = Math.abs(((p.coords.x + 1) - finish.x)) + Math.abs(((p.coords.y) - finish.y) + Math.abs(((p.coords.z) - finish.z)));
-				TryAddOpen(closedList, openList, new Point(p, new Coordinate(p.coords.x + 1, p.coords.y, p.coords.z), cost));
-			}
-		}
-		if (p.coords.x > 0) {
-			if (maze.get(p.coords.z).get(p.coords.y).get(p.coords.x - 1) == ' '
-					|| maze.get(p.coords.z).get(p.coords.y).get(p.coords.x - 1) == 'z'
-					|| maze.get(p.coords.z).get(p.coords.y).get(p.coords.x - 1) == 'Z'
-					|| maze.get(p.coords.z).get(p.coords.y).get(p.coords.x - 1) == 'S'
-					|| maze.get(p.coords.z).get(p.coords.y).get(p.coords.x - 1) == 'X') {
-				int cost = Math.abs(((p.coords.x - 1) - finish.x)) + Math.abs(((p.coords.y) - finish.y) + Math.abs(((p.coords.z) - finish.z)));
-				TryAddOpen(closedList, openList, new Point(p, new Coordinate(p.coords.x - 1, p.coords.y, p.coords.z), cost));
-			}
-		}
-		if (maze.get(p.coords.z).floor.size() > p.coords.y + 1) {
-			if (maze.get(p.coords.z).get(p.coords.y + 1).get(p.coords.x) == ' '
-					|| maze.get(p.coords.z).get(p.coords.y + 1).get(p.coords.x) == 'z'
-					|| maze.get(p.coords.z).get(p.coords.y + 1).get(p.coords.x) == 'Z'
-					|| maze.get(p.coords.z).get(p.coords.y + 1).get(p.coords.x) == 'S'
-					|| maze.get(p.coords.z).get(p.coords.y + 1).get(p.coords.x) == 'X') {
-				int cost = Math.abs(((p.coords.x) - finish.x)) + Math.abs(((p.coords.y + 1) - finish.y) + Math.abs(((p.coords.z) - finish.z)));
-				TryAddOpen(closedList, openList, new Point(p, new Coordinate(p.coords.x, p.coords.y + 1, p.coords.z), cost));
-			}
-		}
-		if (p.coords.y > 0) {
-			if (maze.get(p.coords.z).get(p.coords.y - 1).get(p.coords.x) == ' '
-					|| maze.get(p.coords.z).get(p.coords.y - 1).get(p.coords.x) == 'z'
-					|| maze.get(p.coords.z).get(p.coords.y - 1).get(p.coords.x) == 'Z'
-					|| maze.get(p.coords.z).get(p.coords.y - 1).get(p.coords.x) == 'S'
-					|| maze.get(p.coords.z).get(p.coords.y - 1).get(p.coords.x) == 'X') {
-				int cost = Math.abs(((p.coords.x) - finish.x)) + Math.abs(((p.coords.y - 1) - finish.y) + Math.abs(((p.coords.z) - finish.z)));
-				TryAddOpen(closedList, openList, new Point(p, new Coordinate(p.coords.x, p.coords.y - 1, p.coords.z), cost));
-			}
-		}
-		if(maze.get(p.coords.z).get(p.coords.y).get(p.coords.x) == 'z') {
-			int cost = Math.abs(((p.coords.x) - finish.x)) + Math.abs(((p.coords.y) - finish.y) + Math.abs(((p.coords.z - 1) - finish.z)));
-			//maze.get(p.coords.z).get(p.coords.y).set(p.coords.x, ' ');
-			TryAddOpen(closedList, openList, new Point(p, new Coordinate(p.coords.x, p.coords.y, p.coords.z - 1), cost));
-		}
-		if(maze.get(p.coords.z).get(p.coords.y).get(p.coords.x) == 'Z') {
-			int cost = Math.abs(((p.coords.x) - finish.x)) + Math.abs(((p.coords.y) - finish.y) + Math.abs(((p.coords.z + 1) - finish.z)));
-			//maze.get(p.coords.z).get(p.coords.y).set(p.coords.x, ' ');
-			TryAddOpen(closedList, openList, new Point(p, new Coordinate(p.coords.x, p.coords.y, p.coords.z + 1), cost));
-		}
-		}
-	}
-
-	static long inE = 0;
-	static long inE2 = 0;
-
-	private static void TryAddOpen(LinkedHashSet<Point> closedList, ArrayList<Point> openList, Point p) {
-
-		if (closedList.contains(p)) {
+	/**
+	 * Tries to add a point to the open list for further checking
+	 * 
+	 * @param closedList Things that can't go on the open list
+	 * @param openList The current open list
+	 * @param point The point we want to add
+	 */
+	private static void TryAddOpen(LinkedHashSet<Point> closedList, LinkedHashSet<Point> openList, Point point) {
+		// If the closedList or openList has point we can't add it to openList
+		if (closedList.contains(point) || openList.contains(point))
 			return;
-		}
-
-		boolean onOpenList = false;
-		int i = openList.indexOf(p);
-		if (i != -1) {
-			Point g = openList.get(i);
-			if (g.cost > p.cost) {
-				openList.remove(i);
-			} else {
-				onOpenList = true;
-			}
-		}
-		if (!onOpenList) {
-			openList.add(p);
-		}
-
+		else
+			openList.add(point);
 	}
 
-	public static void output(String file, ArrayList<Floor> map, ArrayList<Coordinate> path) {
+	/**
+	 * Now that we have a path we can output it
+	 * 
+	 * @param file The name of the output file
+	 * @param map The 3D map
+	 * @param path The path the pathfinding took
+	 */
+	public static void output(String file, ArrayList<ArrayList<ArrayList<Character>>> map, ArrayList<Coordinate> path) {
+
+		// Turns any whitespace on the pathfind into Ps, keeps z Z etc.
 		for (int i = 0; i < path.size(); i++) {
-			if (map.get(path.get(i).z).get(path.get(i).y).get(path.get(i).x) == ' ') {
-				map.get(path.get(i).z).get(path.get(i).y).set(path.get(i).x, 'P');
-			}
+			Coordinate p = path.get(i);
+			if (map.get(p.z).get(p.y).get(p.x) == ' ')
+				map.get(p.z).get(p.y).set(p.x, 'P');
 		}
 
 		try {
 
+			// Makes a byte array to instantly write to file
 			byte[] bytes = new byte[map.get(0).get(0).size() * map.get(0).size() * map.size() + map.size()
 					+ map.size() * map.get(0).size()];
 
+			// Keeps track of bytes
 			int count = 0;
 
+			// Loops through the whole map and adds it to the byte array, including pathfind stuff
 			for (int z = 0; z < map.size(); z++) {
 				for (int y = 0; y < map.get(z).size(); y++) {
 					for (int x = 0; x < map.get(z).get(y).size(); x++) {
@@ -287,18 +367,33 @@ public class Main {
 				bytes[count++] = (byte) '\n';
 			}
 
+			// Writes the byte array to file
 			Files.write(Paths.get(file), bytes);
 
-		} catch (Exception e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 
+	/**
+	 * Just prints the path taken to file, instead of the whole map for efficiency purposes
+	 * 
+	 * @param file The file name
+	 * @param path The path taken
+	 */
 	public static void quickOutput(String file, ArrayList<Coordinate> path) {
+		
+		// Creates a byte array with one byte allocated for each coordinate on the path
 		byte[] bytes = new byte[path.size()];
+		
+		// Stores the previous X and Y to see if it should go left, right, up, or down
 		int previousX = path.get(0).x;
 		int previousY = path.get(0).y;
+		
+		//TODO: Make everything past here work with actual mazes
+		
 		boolean newL = false;
+		
 		bytes[0] = 'S';
 		for (int i = 1; i < path.size(); i++) {
 			if (path.get(i).x == -1 && path.get(i).y == -1) {
@@ -328,7 +423,6 @@ public class Main {
 		try {
 			Files.write(Paths.get(file), bytes);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
