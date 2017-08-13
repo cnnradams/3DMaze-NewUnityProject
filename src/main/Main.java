@@ -6,6 +6,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * 
@@ -33,7 +35,6 @@ public class Main {
 		
 		long inputTimingEnd = System.currentTimeMillis() - inputTimingStart;
 
-		new LinkedHashSet<Integer>().contains(1);
 		long pathfindTimingStart = System.currentTimeMillis();
 		
 		// Works with the input to create a list of coordinates you would need to travel to to pathfind
@@ -170,57 +171,48 @@ public class Main {
 	 */
 	public static ArrayList<Coordinate> pathFind(ArrayList<ArrayList<ArrayList<Character>>> maze) {
 		
+	    RunTask.maze = maze;
+	    
 		// Open list to store potential paths
-		OpenList openList = new OpenList();
+		RunTask.openList = new OpenList();
 		
 		// Closed list to store actual path
-		LinkedHashSet<Point> closedList = new LinkedHashSet<Point>();
+		RunTask.closedList = new LinkedHashSet<Point>();
 		
 		// Begins with the starting point that has no parent
 		Point startPoint = new Point(null, startPos, 0);
 		
 		// Tiles we've checked around them for paths
-		closedList.add(startPoint);
+		RunTask.closedList.add(startPoint);
 		
 		// Tries to add its 6 neighbouring tiles to the open list for further pathfinding
-		TryAddOpens(startPoint, closedList, openList, endPos, maze);
+		TryAddOpens(startPoint, RunTask.closedList, RunTask.openList, endPos, maze);
 
 		// The final point
-		Point finalP = null;
+		RunTask.finalP = null;
+		
+		ExecutorService executors = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2);
+		ArrayList<RunTask> runTasks = new ArrayList<>(Runtime.getRuntime().availableProcessors() * 2);
+		for(int i = 0; i < Runtime.getRuntime().availableProcessors() * 2; i++) {
+		    runTasks.add(new RunTask());
+		}
+		
+		
 		
 		// Loops until broken
-		while (true) {
-			
-			// Its no longer a potential tile, it's now discovered
-			 Point least = openList.remove();
-			closedList.add(least);
-			
-			// If it made it to the target
-			if (least.coords.equals(endPos)) {
-				// We made it so stop looping now
-				finalP = least;
-				break;
-			}
-			
-			// Sees where this cheap tile will lead
-			TryAddOpens(least, closedList, openList, endPos, maze);
-			
-			// If least was the last in the openlist and found nothing tryable around it
-			if (openList.size() == 0) {
-				// Ran out of possible paths, we give up!
-				System.out.println("No Path");
-				System.exit(0);
-			}
-			
+		while (!RunTask.done) {
+		    for(RunTask task : runTasks) {
+		        executors.execute(task);
+		    }
 		}
 		
 		// Follows the parent chain of finalP all the way back to the start, the most efficient path
 		ArrayList<Coordinate> finalPath = new ArrayList<Coordinate>();
-		finalPath.add(finalP.coords);
+		finalPath.add(RunTask.finalP.coords);
 		while (true) {
-			finalP = finalP.parent;
-			if (finalP != null)
-				finalPath.add(0, finalP.coords);
+		    RunTask.finalP = RunTask.finalP.parent;
+			if (RunTask.finalP != null)
+				finalPath.add(0, RunTask.finalP.coords);
 			else
 				break;
 		}
@@ -419,5 +411,41 @@ public class Main {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+	
+	private static class RunTask implements Runnable {
+
+	    static ArrayList<ArrayList<ArrayList<Character>>> maze;
+	    static OpenList openList;
+	    static LinkedHashSet<Point> closedList;
+	    static Point finalP;
+	    static boolean done = false;
+	    
+        @Override
+        public void run() {
+            System.out.println(openList.size());
+            if (openList.size() == 0) {
+                // Ran out of possible paths, we give up!
+                System.out.println("No Path");
+                return;
+            }
+            
+            // Its no longer a potential tile, it's now discovered
+            Point least = openList.remove();
+            closedList.add(least);
+            
+            // If it made it to the target
+            if (least.coords.equals(endPos)) {
+                // We made it so stop looping now
+                finalP = least;
+                done = true;
+            }
+            
+            // Sees where this cheap tile will lead
+            TryAddOpens(least, closedList, openList, endPos, maze);
+            
+            // If least was the last in the openlist and found nothing tryable around it
+
+        }
 	}
 }
