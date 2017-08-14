@@ -247,12 +247,9 @@ public class Main {
 			// Right, checks if in bounds and if not #
 			if (maze.get(point.coords.z).get(point.coords.y).size() > point.coords.x + 1) {
 				if (maze.get(point.coords.z).get(point.coords.y).get(point.coords.x + 1) != '#') {
-					
-					// Calculates cost based on direct distance to target (without pythagorean since there is no diagnol)
-					int cost = Math.abs(point.coords.x + 1 - finish.x) + Math.abs(point.coords.y - finish.y) + Math.abs(point.coords.z - finish.z);
 
 					// Tries to add to open list
-					TryAddOpen(closedList, openList, new Point(point, new Coordinate(point.coords.x + 1, point.coords.y, point.coords.z), cost));
+					TryAddOpen(closedList, openList, new Point(point, new Coordinate(point.coords.x + 1, point.coords.y, point.coords.z), getCost(point,finish)));
 					
 				}
 			}
@@ -261,11 +258,8 @@ public class Main {
 			if (point.coords.x > 0) {
 				if (maze.get(point.coords.z).get(point.coords.y).get(point.coords.x - 1) != '#') {
 					
-					// Calculates cost based on direct distance to target (without pythagorean since there is no diagnol)
-					int cost = Math.abs(point.coords.x - 1 - finish.x) + Math.abs(point.coords.y - finish.y) + Math.abs(point.coords.z - finish.z);
-					
 					// Tries to add to open list
-					TryAddOpen(closedList, openList, new Point(point, new Coordinate(point.coords.x - 1, point.coords.y, point.coords.z), cost));
+					TryAddOpen(closedList, openList, new Point(point, new Coordinate(point.coords.x - 1, point.coords.y, point.coords.z), getCost(point,finish)));
 				}
 			}
 			
@@ -273,11 +267,8 @@ public class Main {
 			if (maze.get(point.coords.z).size() > point.coords.y + 1) {
 				if (maze.get(point.coords.z).get(point.coords.y + 1).get(point.coords.x) != '#') {
 					
-					// Calculates cost based on direct distance to target (without pythagorean since there is no diagnol)
-					int cost = Math.abs(((point.coords.x) - finish.x))+ Math.abs(((point.coords.y + 1) - finish.y) + Math.abs(((point.coords.z) - finish.z)));
-					
 					// Tries to add to open list
-					TryAddOpen(closedList, openList, new Point(point, new Coordinate(point.coords.x, point.coords.y + 1, point.coords.z), cost));
+					TryAddOpen(closedList, openList, new Point(point, new Coordinate(point.coords.x, point.coords.y + 1, point.coords.z), getCost(point,finish)));
 				}
 			}
 			
@@ -285,32 +276,23 @@ public class Main {
 			if (point.coords.y > 0) {
 				if (maze.get(point.coords.z).get(point.coords.y - 1).get(point.coords.x) != '#') {
 					
-					// Calculates cost based on direct distance to target (without pythagorean since there is no diagnol)
-					int cost = Math.abs(point.coords.x - finish.x) + Math.abs(point.coords.y - 1 - finish.y) + Math.abs(point.coords.z - finish.z);
-					
 					// Tries to add to open list
-					TryAddOpen(closedList, openList, new Point(point, new Coordinate(point.coords.x, point.coords.y - 1, point.coords.z), cost));
+					TryAddOpen(closedList, openList, new Point(point, new Coordinate(point.coords.x, point.coords.y - 1, point.coords.z), getCost(point,finish)));
 				}
 			}
 			
 			// Through, checks if z
 			if (maze.get(point.coords.z).get(point.coords.y).get(point.coords.x) == 'z') {
-				
-				// Calculates cost based on direct distance to target (without pythagorean since there is no diagnol)
-				int cost = Math.abs(point.coords.x - finish.x) + Math.abs(point.coords.y - finish.y) + Math.abs(point.coords.z - 1 - finish.z);
-				
+
 				// Tries to add to open list
-				TryAddOpen(closedList, openList, new Point(point, new Coordinate(point.coords.x, point.coords.y, point.coords.z - 1), cost));
+				TryAddOpen(closedList, openList, new Point(point, new Coordinate(point.coords.x, point.coords.y, point.coords.z - 1), getCost(point,finish)));
 			}
 			
 			// Out, checks if Z
 			if (maze.get(point.coords.z).get(point.coords.y).get(point.coords.x) == 'Z') {
 				
-				// Calculates cost based on direct distance to target (without pythagorean since there is no diagnol)
-				int cost = Math.abs(point.coords.x - finish.x) + Math.abs(point.coords.y - finish.y) + Math.abs(point.coords.z + 1 - finish.z);
-				
 				// Tries to add to open list
-				TryAddOpen(closedList, openList, new Point(point, new Coordinate(point.coords.x, point.coords.y, point.coords.z + 1), cost));
+				TryAddOpen(closedList, openList, new Point(point, new Coordinate(point.coords.x, point.coords.y, point.coords.z + 1), getCost(point,finish)));
 			}
 	}
 
@@ -324,6 +306,8 @@ public class Main {
 	private static void TryAddOpen(LinkedHashSet<Point> closedList, OpenList openList, Point point) {
 
 		// If the closedList or openList has point we can't add it to openList
+		// Normally you would compare the cost of the contained point in the openList but in this case
+        // where speed > perfect path and the map is rather tight its better to just see if it exists
 		if (closedList.contains(point) || openList.contains(point))
 			return;
 		else
@@ -331,6 +315,17 @@ public class Main {
 		
 	}
 
+	/**
+	 * Calculates cost based on direct distance to target (without pythagorean since there is no diagnol)
+	 * @param point Current point
+	 * @param finish End target
+	 * @return Heuristic of the point
+	 */
+	public static int getCost(Point point, Coordinate finish) {
+		// Multiplying the Z coordinate by 4 encourages the program to prioritize getting to the top floor ASAP, since the maze is rather large
+		return Math.abs(point.coords.x - finish.x) + Math.abs(point.coords.y - finish.y) + (Math.abs(point.coords.z + 1 - finish.z) * 4);
+	}
+	
 	/**
 	 * Now that we have a path we can output it
 	 * 
