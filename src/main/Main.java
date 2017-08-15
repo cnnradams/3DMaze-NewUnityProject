@@ -36,8 +36,7 @@ public class Main {
 		ArrayList<ArrayList<ArrayList<Character>>> input = getInput(INPUT_FILE_NAME);
 		
 		long inputTimingEnd = System.currentTimeMillis() - inputTimingStart;
-		System.out.println("Read Time: " + inputTimingEnd + "ms");
-		new LinkedHashSet<Integer>().contains(1);
+		
 		long pathfindTimingStart = System.currentTimeMillis();
 		
 		// Works with the input to create a list of coordinates you would need to travel to to pathfind
@@ -86,11 +85,13 @@ public class Main {
             ArrayList<ArrayList<Character>> twoD = new ArrayList<>();
             ArrayList<Character> oneD = new ArrayList<>();
             
-            
+            // Loop through all bytes
             while(buffer.hasRemaining()) {
                 char c = (char)buffer.get();
+                // Ignore a \r because it will be followed by \n
                 if(c == '\r');
                 else if(c == '\n') {
+                    // This is the second line
                     if(oneD.size() == 0) {
                             // End of floor
                             if(twoD.size() != 0) {
@@ -99,6 +100,7 @@ public class Main {
                             twoD = new ArrayList<>(twoD.size());
     
                     }
+                    // First newline
                     else {
                         // End of line
                         if(oneD.size() != 0)
@@ -107,6 +109,7 @@ public class Main {
                     }
                 }
                 else {
+                    // Look for start or end coordinates
                     if (c == 'S')
                         startPos = new Coordinate(oneD.size(), twoD.size(), maze.size());
                     else if (c == 'X') 
@@ -116,6 +119,7 @@ public class Main {
                 }
             }
             
+            // Add unadded dimensions
             if(oneD.size() != 0) {
                 twoD.add(oneD);
             }
