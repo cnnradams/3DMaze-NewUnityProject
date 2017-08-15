@@ -15,7 +15,7 @@ import java.util.LinkedHashSet;
  *
  * Main class for 3D maze pathfinding, 
  * including timings and file input/output
- * Created using A* but in three dimensions
+ * Created using A* but in three dimensions minus backwards distance calculations since it's too slow
  * Threads are not used because they are heavier to create/pool than just running the loop in the main thread
  * Object Pooling doesn't make a difference with how lightweight Point and Coordinate is
  */
