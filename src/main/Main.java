@@ -1,7 +1,9 @@
 package main;
 
-import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -34,7 +36,7 @@ public class Main {
 		ArrayList<ArrayList<ArrayList<Character>>> input = getInput(INPUT_FILE_NAME);
 		
 		long inputTimingEnd = System.currentTimeMillis() - inputTimingStart;
-
+		System.out.println("Read Time: " + inputTimingEnd + "ms");
 		new LinkedHashSet<Integer>().contains(1);
 		long pathfindTimingStart = System.currentTimeMillis();
 		
@@ -76,92 +78,59 @@ public class Main {
 	 * @return A 3 Dimensional array of each character in the file
 	 */
 	public static ArrayList<ArrayList<ArrayList<Character>>> getInput(String fileName) {
-		
-			try {
-			
-			// Opens the file in a reader so we can get the input
-			BufferedReader input = Files.newBufferedReader(Paths.get(fileName));
-			
-			// Boolean used to skip double whitespace inbetween floors so the program 
-			// doesn't think the second is a new floor when its really just blank 
-			boolean previous = false;
-			
-			// Stores the current floor being read, increased whenever the program encounters an empty line
-			int zLevel = 0;
-			
-			// Storage for the whole maze
-			ArrayList<ArrayList<ArrayList<Character>>> layers = new ArrayList<ArrayList<ArrayList<Character>>>();
-			
-			// Storage for the singular floor, eventually added to the whole maze
-			ArrayList<ArrayList<Character>> level = new ArrayList<ArrayList<Character>>();
-			
-			// The current Y level, increased after every line but reset when zLevel increases
-			int yLevel = 0;
-			
-			// The line input from in.txt
-			String inputLine;
-			
-				// Works through every single line until there are none left
-				while ((inputLine = input.readLine()) != null) {
-
-					// If there is content in the line
-					if (inputLine.length() != 0) {
-						
-						// Since it's not whitespace, we can accept the next whitespace as a new floor
-						previous = false;
-						
-						// Annoyingly enough you can't convert a String to an ArrayList<Character>,
-						// so we have to do it manually (you can in java 8 but I dont like java 8 stuff)
-						ArrayList<Character> charList = new ArrayList<Character>();
-						
-						// Loops through every char in the String
-						for (int i = 0; i < inputLine.length(); i++) {
-							Character c = inputLine.charAt(i);
-							
-							// If it's S or X you now know where the start and end of the maze is
-							if (c == 'S')
-								startPos = new Coordinate(i, yLevel, zLevel);
-							else if (c == 'X') 
-								endPos = new Coordinate(i, yLevel, zLevel);
-							
-							charList.add(inputLine.charAt(i));
-						}
-						
-						// Add the row to the floor and then get ready for the next row
-						level.add(charList);
-						yLevel++;
-					} else if (previous == true) {
-						// Ignore the double blank row
-						continue;
-					} else {
-						// Prepare for double blank row
-						previous = true;
-						
-						// Reset y, get a new floor
-						yLevel = 0;
-						zLevel++;
-						
-						// Add the floor to the full array
-						layers.add(level);
-						level = new ArrayList<ArrayList<Character>>();
-					}
-				}
-			
-			// Add the last floor
-			layers.add(level);
-
-			input.close();
-
-			return layers;
-			
-			} catch(IOException io) {
-				System.out.println("Getting input from " + fileName + " failed: ");
-				io.printStackTrace();
-				System.exit(0);
-			}
-
-		// If something ever gets here I will quit programming forever
-		return null;
+	    try (FileChannel inChannel = new RandomAccessFile(fileName, "r").getChannel()) {
+            MappedByteBuffer buffer = inChannel.map(FileChannel.MapMode.READ_ONLY, 0, inChannel.size());
+            
+            ArrayList<ArrayList<ArrayList<Character>>> maze = new ArrayList<>();
+            
+            ArrayList<ArrayList<Character>> twoD = new ArrayList<>();
+            ArrayList<Character> oneD = new ArrayList<>();
+            
+            
+            while(buffer.hasRemaining()) {
+                char c = (char)buffer.get();
+                if(c == '\r');
+                else if(c == '\n') {
+                    if(oneD.size() == 0) {
+                            // End of floor
+                            if(twoD.size() != 0) {
+                                maze.add(twoD);
+                            }
+                            twoD = new ArrayList<>(twoD.size());
+    
+                    }
+                    else {
+                        // End of line
+                        if(oneD.size() != 0)
+                            twoD.add(oneD);
+                        oneD = new ArrayList<>(oneD.size());
+                    }
+                }
+                else {
+                    if (c == 'S')
+                        startPos = new Coordinate(oneD.size(), twoD.size(), maze.size());
+                    else if (c == 'X') 
+                        endPos = new Coordinate(oneD.size(), twoD.size(), maze.size());
+                    
+                    oneD.add(c);
+                }
+            }
+            
+            if(oneD.size() != 0) {
+                twoD.add(oneD);
+            }
+            
+            if(twoD.size() != 0) {
+                maze.add(twoD);
+            }
+            
+            return maze;
+            
+	    } catch (IOException e) {
+            e.printStackTrace();
+        }
+	    
+	    return null;
 	}
 	static long inE2 = 0;
 	/**
